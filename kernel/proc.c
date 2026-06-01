@@ -155,6 +155,8 @@ found:
 static void
 freeproc(struct proc *p)
 {
+  proc_unmap_display(p);
+  virtio_gpu_restore(p);
   if(p->trapframe)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
@@ -162,6 +164,8 @@ freeproc(struct proc *p)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
   p->sz = 0;
+  p->display_map_va = 0;
+  p->display_mapped = 0;
   p->pid = 0;
   p->parent = 0;
   p->name[0] = 0;
@@ -169,6 +173,16 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+}
+
+void
+proc_unmap_display(struct proc *p)
+{
+  if(p->display_mapped){
+    uvmunmap(p->pagetable, p->display_map_va, GPU_FB_PAGES, 0);
+    p->display_map_va = 0;
+    p->display_mapped = 0;
+  }
 }
 
 // Create a user page table for a given process, with no user memory,

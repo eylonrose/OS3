@@ -202,5 +202,9 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    printf("show_flip: press Enter to exit\n");
+    char ch;
+    read(0, &ch, 1);
+
     exit(0);
 }

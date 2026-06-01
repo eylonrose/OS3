@@ -133,6 +133,7 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
+	$U/_displaytest\
 	$U/_show_flip\
 	$U/_show_map\
 	$U/_gol\

@@ -122,6 +122,8 @@ exec(char *path, char **argv)
     
   // Commit to the user image.
   oldpagetable = p->pagetable;
+  proc_unmap_display(p);
+  virtio_gpu_restore(p);
   p->pagetable = pagetable;
   p->sz = sz;
   p->trapframe->epc = elf.entry;  // initial program counter = main

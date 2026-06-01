@@ -107,6 +107,7 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 void            kproc_create(void (*)(void), const char *);
+void            proc_unmap_display(struct proc *);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -189,6 +190,10 @@ void            virtio_disk_intr(void);
 // virtio_gpu.c
 void            virtio_gpu_init(void);
 void            virtio_gpu_commit(void);
+int             virtio_gpu_map(pagetable_t, uint64);
+void            virtio_gpu_flip(struct proc *, uint64);
+void            virtio_gpu_restore(struct proc *);
+void            virtio_gpu_restore_kernel(void);
 void            display_daemon(void);
 
 // number of elements in fixed-size array

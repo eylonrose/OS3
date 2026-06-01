@@ -146,6 +146,9 @@ static struct
 // ── Framebuffer page pointers ────────────────────────────────────────
 
 static void *fb[FB_PAGES];
+static struct proc *flip_owner;
+static struct virtio_gpu_mem_entry map_entries[FB_PAGES];
+static struct virtio_gpu_mem_entry flip_entries[FB_PAGES];
 
 // ── RESOURCE_ATTACH_BACKING command buffer (header + all entries) ────
 
@@ -545,6 +548,65 @@ void virtio_gpu_init(void)
 // Called by display_daemon.  Sends TRANSFER_TO_HOST_2D + RESOURCE_FLUSH.
 void virtio_gpu_commit(void)
 {
+    gpu_transfer_flush();
+}
+
+int
+virtio_gpu_map(pagetable_t pagetable, uint64 va)
+{
+    int i;
+
+    for (i = 0; i < FB_PAGES; i++) {
+        if (mappages(pagetable, va + i * PGSIZE, PGSIZE,
+                     (uint64)fb[i], PTE_U | PTE_R | PTE_W) < 0)
+            goto err;
+    }
+    return 0;
+
+err:
+    if (i > 0)
+        uvmunmap(pagetable, va, i, 0);
+    return -1;
+}
+
+static void
+virtio_gpu_attach_fb(void)
+{
+    for (int i = 0; i < FB_PAGES; i++) {
+        map_entries[i].addr = (uint64)fb[i];
+        map_entries[i].length = PGSIZE;
+        map_entries[i].padding = 0;
+    }
+    gpu_cmd_detach();
+    gpu_cmd_attach(map_entries, FB_PAGES);
+    flip_owner = 0;
+}
+
+void
+virtio_gpu_restore_kernel(void)
+{
+    virtio_gpu_attach_fb();
+}
+
+void
+virtio_gpu_restore(struct proc *p)
+{
+    if (flip_owner == p)
+        virtio_gpu_attach_fb();
+}
+
+void
+virtio_gpu_flip(struct proc *p, uint64 va)
+{
+    for (int i = 0; i < FB_PAGES; i++) {
+        flip_entries[i].addr = walkaddr(p->pagetable, va + i * PGSIZE);
+        flip_entries[i].length = PGSIZE;
+        flip_entries[i].padding = 0;
+    }
+
+    gpu_cmd_detach();
+    gpu_cmd_attach(flip_entries, FB_PAGES);
+    flip_owner = p;
     gpu_transfer_flush();
 }
 
